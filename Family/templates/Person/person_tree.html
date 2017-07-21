@@ -1,0 +1,54 @@
+{% extends "../page_base.html" %}
+{% block headLibs %}
+    {% load static %}
+	<script type="text/javascript" src="{% static "vis/dist/vis.js" %}"></script>
+    <link type="text/css" rel="stylesheet" href="{% static "vis/dist/vis.css" %}"/>
+{% endblock %}
+{% block _body %}
+    <h1 style="position:fixed;">Drzewo osób</h1>
+    <div id="genealogyTree" style="height: 100vh; width: 100vw"></div>
+    <script type="text/javascript">
+        var genealogy;
+
+        function drawGenealogy() {
+            // create an array with nodes
+            var nodesArray = [
+                {% for obj in object_list %}
+                    {id: {{ obj.person.id }}, label: '{{ obj.person.name }} {{ obj.person.surname }}'},
+                {% endfor %}
+            ];
+            var nodes = new vis.DataSet(nodesArray);
+
+            // create an array with edges
+            var edgesArray = [
+				{% for edge in edge_list %}
+					{% if edge.type == "Child" %}
+						{from: {{ edge.person1.id }}, to: {{ edge.person2.id }}, arrows:'to'},
+					{% else %}
+						{from: {{ edge.person1.id }}, to: {{ edge.person2.id }} },
+					{% endif %}
+				{% endfor %}
+            ];
+            var edges = new vis.DataSet(edgesArray);
+            var container = document.getElementById('genealogyTree');
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {
+				layout: {
+					hierarchical: {
+						direction: "UD",
+						sortMethod: "directed",
+						nodeSpacing: 175
+					}
+				},
+				physics: {
+					enabled: false
+				},
+			};
+            genealogy = new vis.Network(container, data, options);
+        }
+        drawGenealogy();
+    </script>
+{% endblock %}

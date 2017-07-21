@@ -1,0 +1,10 @@
+{% extends "../page_base.html" %}
+
+{% block _body %}
+    <h1>Lista osób</h1>
+    {% for person in object_list %}
+			<li>{{ person.name }} {{ person.surname }}</li>
+    {% empty %}
+			<li>Puste</li>
+    {% endfor %}
+{% endblock %}

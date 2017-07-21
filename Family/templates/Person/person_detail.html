@@ -1,0 +1,36 @@
+{% extends "../page_base.html" %}
+{% block headLibs %}
+    {% load static %}
+	{% load vis_templatetags %}
+	<script type="text/javascript" src="{% static "vis/dist/vis.js" %}"></script>
+    <link type="text/css" rel="stylesheet" href="{% static "vis/dist/vis.css" %}"/>
+{% endblock %}
+{% block _body %}
+	<section id="credentials">
+		<h1> Osoba </h1>
+		Imie: {{ object.name }}	<br>
+		Nazwisko: {{ object.surname }} <br>
+	</section>
+	<section id="relations">
+		<ul>
+			{% for rel in rel_list %}
+                <li>{{ rel.person2 }} -> {{ rel.type }} -> {{ rel.person1 }} </li>
+			{% endfor %}
+		</ul>
+	</section>
+	<section id="information_timeline">
+	</section>
+	<script>
+		var items = new vis.DataSet();
+		items.add([
+			{% for inf in text_list %}
+				{ id:{{inf.id}}, content: '{{inf.title}}<br>{{inf.data}}', start: '{{inf.timestamp|vis_timestamp}}' },
+			{% endfor %}
+		]);
+		var main = document.getElementById('information_timeline');
+		var container = document.createElement('div');
+		container.className = 'container';
+		main.appendChild(container);
+		var timeline = new vis.Timeline(container, items, {editable: false} );
+	</script>
+{% endblock %}
