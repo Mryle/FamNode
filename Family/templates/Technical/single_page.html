@@ -26,6 +26,8 @@
                     {% for obj in object_list %}
                         {{ obj.id }} : {
                                 label: '{{ obj.title }}',
+                                stDate: '{{obj.stDate|date:"Y.m.d"}}',
+                                enDate: '{{obj.enDate|date:"Y.m.d"}}',
                             },
                     {% endfor %}
                 },
@@ -41,11 +43,19 @@
                 ],
             },
             functions : {
+                formatDates : function (person) {
+                    if (person.stDate == '' && person.stDate == '') {
+                        return '';
+                    } else {
+                        return '\n'+person.stDate+' - '+person.enDate;
+                    }
+                },
                 addNode : function (id) {
                     if (family.network.nodes.get(id) === null && id != null) {
+                        var added = family.data.people[id];
                         family.network.nodes.add({
                             id: id,
-                            label: family.data.people[id].label,
+                            label: added.label + family.functions.formatDates(added),
                         });
                         return true;
                     }
