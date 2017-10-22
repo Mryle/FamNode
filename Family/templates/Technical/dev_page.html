@@ -1,0 +1,82 @@
+{% extends "../page_base.html" %}
+{% block headLibs %}
+    {% load static %}
+    {% load vis_templatetags %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script type="text/javascript" src="{% static "vis/dist/vis.js" %}"></script>
+    <link type="text/css" rel="stylesheet" href="{% static "vis/dist/vis.css" %}"/>
+    <style>
+        
+    </style>
+{% endblock %}
+{% block _body %}
+    <div id="genealogyTree" style="height: 100vh; width: 100vw; float:left"></div>
+    <section id="chosenList">
+    <form action="/single/" method="GET">
+        {% for obj in object_list %}
+        <input type="checkbox" id="person{{ obj.id }}" name="person.{{ obj.id }}" value='true' onchange="changeColor(this, {{ obj.id }});" checked="true">{{ obj.title }} ({{obj.id}})<br>
+        {% endfor %}
+        <input type="submit" value="Generuj">
+    </form>
+    </section>
+    <script type="text/javascript">
+        var edges;
+        var nodes;
+        var genealogy;
+        
+        function changeColor(button, id) {
+            var value = button.checked;
+            var previous = nodes.get(id);
+            previous.color = value ? 'lime' : 'red';
+            nodes.update(previous);
+        }
+        
+        function drawGenealogy() {
+            // create an array with nodes
+            var nodesArray = [
+                {% for obj in object_list %}
+                    {
+                        id: {{ obj.id }},
+                        label: '{{ obj.title }}' ,
+                        color: 'lime',
+                    },
+                {% endfor %}
+            ];
+            nodes = new vis.DataSet(nodesArray);
+
+            // create an array with edges
+            var edgesArray = [
+                {% for edge in edge_list %}
+                    {from: {{ edge.person1.id }}, to: {{ edge.person2.id }}, arrows:'to'},
+                {% endfor %}
+            ];
+            edges = new vis.DataSet(edgesArray);
+            var container = document.getElementById('genealogyTree');
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {
+                edges: {
+                    color: '#00FF00'
+                },
+                physics: {
+                    enabled: true
+                },
+            };
+            network = new vis.Network(container, data, options);
+            network.on("click", function (params) {
+                //params.event = "[original event]";
+                //document.getElementById('sidebar').innerHTML = JSON.stringify(params, null, 4);
+                if (params.nodes.length === 1) {
+                    var button = document.getElementById('person' + params.nodes[0]);
+                    console.log(button);
+                    button.checked = !button.checked;
+                    $(button).trigger('onchange');
+                }
+                console.log('click event, getNodeAt returns: ' + this.getNodeAt(params.pointer.DOM));
+            });
+        }
+        drawGenealogy();
+    </script>
+{% endblock %}

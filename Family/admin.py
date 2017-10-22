@@ -5,9 +5,12 @@ from Family import models
 class InformationInline(admin.StackedInline):
     model = models.InformationText
 
-@admin.register(models.Person)
-class PersonAdmin(admin.ModelAdmin):
-    inlines = [InformationInline]
+@admin.register(models.FamilyNode)
+class NodeAdmin(admin.ModelAdmin):
+    list_display = ('title', 'type', 'stDate', 'enDate')
+    list_editable = ('stDate', 'enDate')
+    pass
+    #inlines = [InformationInline]
 
 @admin.register(models.Relation)
 class RelationAdmin(admin.ModelAdmin):

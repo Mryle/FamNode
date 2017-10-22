@@ -1,0 +1,200 @@
+{% extends "../page_base.html" %}
+{% block headLibs %}
+    {% load static %}
+    {% load vis_templatetags %}
+    <script type="text/javascript" src="{% static "vis/dist/vis.js" %}"></script>
+    <link type="text/css" rel="stylesheet" href="{% static "vis/dist/vis.css" %}"/>
+    <style>
+        
+    </style>
+{% endblock %}
+{% block _body %}
+    <section id="pre">
+        <div id="header" style="height: 10%; width: 100%;">
+            <a href="#" onclick="family.functions.hideTabs(); document.getElementById('genealogyTree').style.display='block';">Drzewo</a>
+            <a href="#" onclick="family.functions.hideTabs(); document.getElementById('sidebar').style.display='block';">Informacje</a>
+        </div>
+    </section>
+    <section id="main" style="height:90vh; with:100vw;">
+        <div id="genealogyTree" style="height: 90%; width: 100%;"></div>
+        <div id="sidebar" style="height: 90%; width: 100%;"></div>
+    </section>
+    <script type="text/javascript">
+        var family = {
+            data : {
+                people : {
+                    {% for obj in object_list %}
+                        {{ obj.id }} : {
+                                label: '{{ obj.title }}',
+                            },
+                    {% endfor %}
+                },
+                edges : {
+                    {% for edge in edge_list %}
+                        {{ edge.id }} : {from: {{ edge.person1.id }}, to: {{ edge.person2.id }}, arrows:'to'},
+                    {% endfor %}
+                },
+                text : [
+                    {% for inf in text_list %}
+                        { person_id: {{inf.person.id}}, id:{{inf.id}}, title: '{{inf.title}}', data: '{{inf.data}}', start: '{{inf.timestamp|vis_timestamp}}' },
+                    {% endfor %}
+                ],
+            },
+            functions : {
+                addNode : function (id) {
+                    if (family.network.nodes.get(id) === null && id != null) {
+                        family.network.nodes.add({
+                            id: id,
+                            label: family.data.people[id].label,
+                        });
+                        return true;
+                    }
+                    return false;
+                },
+                addEdge : function (id) {
+                    if (family.network.edges.get(id) === null && id != null) {
+                        family.network.edges.add({
+                            id : id,
+                            from : family.data.edges[id].from,
+                            to : family.data.edges[id].to,
+                        });
+                        return true;
+                    }
+                    return false;
+                },
+                createViewFromPerson : function (id) {
+                    var nodes = []; // nodes to be left
+                    var edges = []; // edges to be left
+                    addDFS(id, 0, 3, -3, nodes, edges);
+                    var nodesToRemove = family.network.nodes.getIds().filter( x => !nodes.includes(x));
+                    var edgesToRemove = family.network.edges.getIds().filter( x => !edges.includes(x));
+                    nodesToRemove.forEach(x => family.network.nodes.remove({id: x}));
+                    edgesToRemove.forEach(x => family.network.edges.remove({id: x}));
+                    nodes.forEach(x => family.functions.addNode(x));
+                    edges.forEach(x => family.functions.addEdge(x));
+                    function addDFS(id, level, maxUp, maxDown, nodes, edges) {
+                        if (level > maxUp || level < maxDown) return false; //Too far
+                        if (id == null || nodes.includes(id)) return false; //already added
+                        nodes.push(id);
+                        console.log("Adding for id " + id + " Person " + family.data.people[id].label + " on level " + level + " constraints (" + maxUp + "/" + maxDown + ")");
+                        for (var num in family.data.edges) {
+                            if (num != null && !edges.includes(num) && family.data.edges[num].from == id && addDFS(family.data.edges[num].to, level + 1, maxUp, level + 1, nodes, edges)) {
+                                edges.push(num);
+                            }
+                        }
+                        for (var num in family.data.edges) {
+                            if (num != null && !edges.includes(num) && family.data.edges[num].to == id && addDFS(family.data.edges[num].from, level - 1, level - 1, maxDown, nodes, edges)) {
+                                edges.push(num);
+                            }
+                        }
+                        return true;
+                    }
+                },
+                createTextTimeline : function(id, container) {
+                    var items = new vis.DataSet();
+                    items.add(
+                            family.data.text.filter(function(data) {return data.person_id === id;})
+                                .map(function(data) {return {start: data.start, content: data.title, id: data.id}})
+                    );
+                    var timeline = new vis.Timeline(container, items, {editable: false} );
+                    return timeline;
+                },
+                writeSidebar : function (id) {
+                    function createMainInfo(id) {
+                        var section = document.createElement("section");
+                        var obj = family.data.people[id];
+                        section.id = "mainInfo";
+                        section.innerHTML = obj.label + " (" + id + ")";
+                        return section;
+                    }
+                    function createInfoTimeline(id) {
+                        var container = document.createElement('section');
+                        var timelineElem = document.createElement('div');
+                        container.appendChild(timelineElem);
+                        var timelineText = document.createElement('div');
+                        timelineText.id = "textTimeline";
+                        container.appendChild(timelineText);
+                        var timeline = family.functions.createTextTimeline(id, timelineElem);
+                        timeline.on('click', function(params) {
+                            console.log(params);
+                            family.data.text.filter(function(data) {return data.id === params.item})
+                                .forEach(function (obj) {timelineText.innerHTML = obj.title + '<br>' + obj.data });
+                        })
+                        return container;
+                    }
+                    var sidebar = document.getElementById('sidebar');
+                    while (sidebar.lastChild) {
+                        sidebar.removeChild(sidebar.lastChild);
+                    }
+                    sidebar.appendChild(createMainInfo(id));
+                    sidebar.appendChild(createInfoTimeline(id));
+                },
+                hideTabs: function(id) {
+                    var main = document.getElementById("main");
+                    for(var i = 0; i < main.children.length; i++){
+                        var elem = main.children[i];
+                        elem.style.display = 'none'; 
+                    }
+                },
+                
+            },
+            network : undefined,
+        };
+
+        function drawGenealogy() {
+            // create an array with nodes
+            var nodesArray = [
+                {% for obj in object_list %}
+                    {
+                        id: {{ obj.id }},
+                        label: '{{ obj.title }}' ,
+                    },
+                {% endfor %}
+            ];
+            var nodes = new vis.DataSet(nodesArray);
+
+            // create an array with edges
+            var edgesArray = [
+                {% for edge in edge_list %}
+                    {id: {{ edge.id }}, from: {{ edge.person1.id }}, to: {{ edge.person2.id }}, arrows:'to'},
+                {% endfor %}
+            ];
+            var edges = new vis.DataSet(edgesArray);
+            var container = document.getElementById('genealogyTree');
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {
+                edges: {
+                    color: '#00FF00'
+                },
+                physics: {
+                    enabled: true
+                },
+                layout: {
+                    hierarchical: {
+                        sortMethod: 'directed',
+                    }
+                },
+            };
+            network = new vis.Network(container, data, options);
+            network.on("click", function (params) {
+                //params.event = "[original event]";
+                //document.getElementById('sidebar').innerHTML = JSON.stringify(params, null, 4);
+                if (params.nodes.length === 1) {
+                    family.functions.writeSidebar(params.nodes[0]);
+                    family.functions.createViewFromPerson(params.nodes[0]);
+                }
+                console.log('click event, getNodeAt returns: ' + this.getNodeAt(params.pointer.DOM));
+            });
+            family.network = {
+                network : network,
+                nodes : nodes,
+                edges : edges,
+            };
+        }
+        drawGenealogy();
+        family.functions.createViewFromPerson(1);
+    </script>
+{% endblock %}

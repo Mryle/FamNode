@@ -19,7 +19,10 @@ from Family import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^list/',  views.PersonSimpleList.as_view()),
-    url(r'^tree/',  views.PersonTree.as_view()),
-	url(r'^detail/(?P<pk>[-\w]+)$',  views.PersonDetails.as_view()),
+    #url(r'^list/',  views.PersonSimpleList.as_view()),
+    #url(r'^tree/',  views.PersonTree.as_view()),
+    #url(r'^graph/',  views.PersonGraph.as_view()),
+    #url(r'^detail/(?P<pk>[-\w]+)$',  views.PersonDetails.as_view()),
+    url(r'^single/',  views.SinglePage.as_view()),
+    url(r'^dev/',  views.DevPage.as_view()),
 ]
